@@ -1,104 +1,173 @@
-.dashboard{
- height: 100%;
- display: flex;
- flex-direction: column;
- align-items: center;
- 
- .texts{
-    flex: 1;
-    display: flex;
+.dashboard {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: white;
+}
+
+.texts {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 80%;
+  gap: 50px;
+}
+
+.texts .logo {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  opacity: 0.8;
+}
+
+.texts .logo img {
+  width: 64px;
+  height: 64px;
+}
+
+.texts .logo h1 {
+  font-size: 64px;
+  font-weight: bold;
+  background: linear-gradient(90deg, #217bfe, #f79d00, #34d399, #ff6b6b);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.texts .options {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+}
+
+.texts .options .option {
+  width: calc(33.33% - 20px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+  padding: 20px;
+  border: 1px solid #555;
+  border-radius: 20px;
+  text-align: center;
+  transition: all 0.3s ease-in-out;
+}
+
+.texts .options .option:hover {
+  transform: scale(1.03);
+  box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.1);
+}
+
+.texts .options .option img {
+  width: 40px;
+  height: 40px;
+}
+
+.formContainer {
+  margin-top: auto;
+  width: 70%;
+  background: #2c2937;
+  border-radius: 20px;
+  display: flex;
+  padding: 10px;
+}
+
+.formContainer form {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.formContainer form input {
+  flex: 1;
+  padding: 15px;
+  background-color: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  font-size: 16px;
+}
+
+.formContainer form button {
+  background-color: #605e68;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.formContainer form button:hover {
+  background-color: #77747e;
+}
+
+.formContainer form button img {
+  width: 16px;
+  height: 16px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 10px;
+  }
+
+  .texts {
+    width: 90%;
+    gap: 30px;
+  }
+
+  .texts .logo {
+    gap: 10px;
+    opacity: 1;
+  }
+
+  .texts .logo img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .texts .logo h1 {
+    font-size: 32px;
+  }
+
+  .texts .options {
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 50%;
-    gap: 50px;
+    gap: 20px;
+  }
 
-    .logo{
-        display: flex;
-        align-items: center;
-        gap: 20px;
-        opacity: 0.2;
+  .texts .options .option {
+    width: 100%;
+    font-size: 12px;
+    padding: 15px;
+  }
 
-        img{
-            width: 64px;
-            height: 64px;
-        }
-        h1{
-            font-size: 64px;
-            background: linear-gradient(to right, #217bfe,
-             orange,lime,aquamarine, gray, brown, rebeccapurple , #e55571 );
-            background-clip: text;
-            -webkit-background-clip: text;
-            color: transparent;
-        }
-    }
-    .options{
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 50px;
+  .formContainer {
+    width: 90%;
+  }
 
-        .option{
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            font-weight: 300;
-            font-size: 14px;
-            padding: 20px;
-            border: 1px solid #555;
-            border-radius: 20px;
+  .formContainer form {
+    gap: 10px;
+  }
 
-            img{
-                width: 40px;
-                height: 40px;
-                object-fit: cover;
-            }
-        }
-    }
- }
+  .formContainer form input {
+    padding: 10px;
+    font-size: 14px;
+  }
 
- .formContainer{
-    margin-top: auto;
-    width: 50%;
-    background: #2c2937;
-    border-radius: 20px;
-    display: flex;
-
-    form{
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 20px;
-        margin-bottom: 10px;
-
-        input{
-            flex: 1;
-            padding: 20px;
-            background-color: transparent;
-            border: none;
-            outline: none;
-            color: #ecececec;
-        }
-        button{
-            background-color: #605e68;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            padding: 10px;
-            display: flex; 
-            align-items: center;
-            justify-content: center;
-            margin-right: 20px;
-
-         img{
-            width: 16px;
-            height: 16px;
-         }   
-        }
-    }
- }
+  .formContainer form button {
+    padding: 10px;
+  }
 }

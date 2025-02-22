@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useOutletContext } from "react-router-dom"; // Import useOutletContext
 import "./dashboardLayout.css";
 import { useAuth } from "@clerk/clerk-react";
 import { useEffect } from "react";
@@ -7,6 +7,7 @@ import ChatList from "../../component/chatList/ChatList";
 const DashboardLayout = () => {
   const { userId, isLoaded } = useAuth();
   const navigate = useNavigate();
+  const [isMenuOpen] = useOutletContext();
 
   useEffect(() => {
     if (isLoaded && !userId) {
@@ -18,7 +19,7 @@ const DashboardLayout = () => {
 
   return (
     <div className="dashboardLayout">
-      <div className="menu">
+      <div className={`menu ${isMenuOpen ? "menu-open" : ""}`}>
         <ChatList />
       </div>
       <div className="content">

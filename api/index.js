@@ -2,7 +2,7 @@ import express from "express";
 import ImageKit from "imagekit";
 import dotenv from "dotenv"; 
 import cors from "cors"
-
+import { createWebSocketServer } from "./controller/websocket.js"; 
 dotenv.config(); 
 
 const port = process.env.PORT || 3000;
@@ -24,6 +24,8 @@ app.get("/api/upload", (req, res) => {
     res.send(result);
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
     console.log(`Connected to API on port ${port}`);
-});
+  });
+  
+  createWebSocketServer(server)
