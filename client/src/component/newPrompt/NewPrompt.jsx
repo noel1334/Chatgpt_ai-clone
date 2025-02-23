@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+// NewPrompt.jsx
+import React, { useEffect, useRef, useState } from "react";
 import "./newPrompt.css";
 import Upload from "../upload/Upload";
 import { IKImage } from "imagekitio-react";
 import model from "../../lib/gemini";
 import Markdown from "react-markdown";
 import AudioRecorder from "../audioRecorder/AudioRecorder";
+import CodeBlock from "../../component/CodeBlock/CodeBlock";
 
 const NewPrompt = () => {
   const [question, setQuestion] = useState("");
@@ -18,25 +20,35 @@ const NewPrompt = () => {
   });
   const [transcription, setTranscription] = useState("");
   const [showTranscription, setShowTranscription] = useState(true);
-  const chat = model.startChat({
-    history: [
-      {
-        role: "user",
-        parts: [{ text: "Hello" }],
-      },
-      {
-        role: "model",
-        parts: [{ text: "Great to meet you. What would you like to know?" }],
-      },
-    ],
-    generationConfig: {
-      // maxOutputTokens: 1000
-    },
-  });
+  const [generating, setGenerating] = useState(false);
+  const chat = useRef(null);
 
   useEffect(() => {
-    endRef.current.scrollIntoView({ behavior: "smooth" });
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [question, answer, img.dbData]);
+
+  useEffect(() => {
+    chat.current = model.startChat({
+      history: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: "Hello.  I would like comprehensive and well-explained answers.",
+            },
+          ],
+        },
+        {
+          role: "model",
+          parts: [{ text: "Great to meet you. What would you like to know?" }],
+        },
+      ],
+      generationConfig: {
+        // maxOutputTokens: 8000,
+        temperature: 0.7,
+      },
+    });
+  }, []);
 
   const accumulatedTextRef = useRef("");
 
@@ -44,32 +56,97 @@ const NewPrompt = () => {
     setQuestion(text);
     accumulatedTextRef.current = "";
     setShowTranscription(false);
+    setGenerating(true); // Start loading
 
-    const result = await chat.sendMessageStream(
-      Object.entries(img.aiData).length ? [img.aiData, text] : [text]
-    );
+    try {
+      const result = await chat.current.sendMessageStream([
+        `Provide a complete answer including all relevant information: ${text}`,
+      ]);
 
-    for await (const chunk of result.stream) {
-      const chunkText = chunk.text();
-      accumulatedTextRef.current += chunkText;
-
-      // Update the state only periodically (e.g., every N characters or after a small delay)
-      setAnswer(accumulatedTextRef.current);
+      let fullAnswer = ""; // Accumulate complete answer
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        fullAnswer += chunkText;
+        setAnswer(fullAnswer);
+      }
+    } catch (error) {
+      console.error("Gemini API error:", error);
+    } finally {
+      setGenerating(false);
     }
     setImg({ isLoading: false, error: "", dbData: {}, aiData: {} });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const text = e.target.text.value;
+    const form = e.target;
+    const text = form.elements.text.value;
+
     if (!text) return;
     add(text);
+  };
+
+  const handleChange = (e) => {
+    const textarea = e.target;
+    textarea.style.height = "auto";
+    textarea.style.height = Math.min(textarea.scrollHeight, 150) + "px";
+  };
+
+  const detectCode = (text) => {
+    const codeRegex = /```([a-zA-Z0-9+#-]+)?\n([\s\S]*?)```/g;
+    let matches = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = codeRegex.exec(text)) !== null) {
+      const fullMatchIndex = match.index;
+      matches.push({
+        lang: match[1] || "javascript",
+        code: match[2].trim(),
+        index: fullMatchIndex,
+        length: match[0].length,
+      });
+      lastIndex = fullMatchIndex + match[0].length;
+      codeRegex.lastIndex = lastIndex;
+    }
+
+    return matches;
+  };
+
+  const splitTextAndCode = (text) => {
+    const codeBlocks = detectCode(text);
+    const segments = [];
+    let currentIndex = 0;
+
+    codeBlocks.forEach((codeBlock) => {
+      if (codeBlock.index > currentIndex) {
+        segments.push({
+          type: "text",
+          content: text.substring(currentIndex, codeBlock.index).trim(),
+        });
+      }
+      segments.push({
+        type: "code",
+        lang: codeBlock.lang,
+        content: codeBlock.code,
+      });
+      currentIndex = codeBlock.index + codeBlock.length;
+    });
+
+    if (currentIndex < text.length) {
+      segments.push({
+        type: "text",
+        content: text.substring(currentIndex).trim(),
+      });
+    }
+
+    return segments;
   };
 
   return (
     <>
       {/* add new chat */}
-      {img.isLoading && <div>Loading ....</div>}
+      {img.isLoading || generating ? <div>Loading ....</div> : null}
       {img.dbData?.filePath && (
         <IKImage
           urlEndpoint={import.meta.env.VITE_IMAGE_KIt_ENDPOINT}
@@ -79,12 +156,27 @@ const NewPrompt = () => {
         />
       )}
       {question && <div className="message user"> {question}</div>}
-      {answer && (
-        <div className="message">
-          <Markdown>{answer}</Markdown>
-        </div>
-      )}
-      {showTranscription && <div className="message ">{transcription}</div>}{" "}
+      {answer &&
+        splitTextAndCode(answer).map((segment, index) => {
+          if (segment.type === "text") {
+            return (
+              <div key={index} className="message">
+                <Markdown>{segment.content}</Markdown>
+              </div>
+            );
+          } else if (segment.type === "code") {
+            return (
+              <>
+                <div key={index} className="message code-block">
+                  <CodeBlock code={segment.content} language={segment.lang} />
+                </div>
+              </>
+            );
+          }
+          return null;
+        })}
+
+      {showTranscription && <div className="message ">{transcription}</div>}
       {/* Conditionally render based on showTranscription */}
       <div className="endChat" ref={endRef}></div>
       <form className="newForm" onSubmit={handleSubmit}>
@@ -96,7 +188,12 @@ const NewPrompt = () => {
           setTranscription={setTranscription}
         />
         <input type="file" name="file" multiple={false} hidden />
-        <input type="text" name="text" placeholder="Ask me anything...." />
+        <textarea
+          type="text"
+          name="text"
+          placeholder="Ask me anything...."
+          onChange={handleChange}
+        />
         <button>
           <img src="/arrow.png" alt="" />
         </button>
