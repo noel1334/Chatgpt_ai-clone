@@ -1,7 +1,6 @@
-/* newPrompt.css */
 
 .endChat {
-  padding-bottom: 100px;
+  padding-bottom: 10px;
 }
 
 .newForm {
@@ -14,6 +13,7 @@
   align-items: center;
   gap: 20px;
   padding: 0px 20px;
+  z-index: 2;
 }
 
 .newForm textarea {
@@ -26,8 +26,8 @@
   border-radius: 5px;
   resize: none;
   overflow-y: auto;
-  min-height: 16px;
-  max-height: 150px;
+  min-height: 120px;
+  max-height: 200px;
 }
 
 .newForm button,
@@ -48,7 +48,10 @@
   height: 16px;
   object-fit: contain;
 }
-
+.disabled-button {
+  cursor: not-allowed;
+  opacity: 0.6; /* Optional: Reduce opacity to visually indicate disabled state */
+}
 /* Small screen adjustments */
 @media (max-width: 768px) {
   .newForm {
@@ -82,15 +85,16 @@
 .code-block > pre > code {
   white-space: pre-wrap !important;
   word-break: break-all;
-  font-size: 14px; /* Adjust font size as needed */
-  line-height: 1.4; /* Adjust line height for readability */
-  display: block; /* Ensures block-level behavior for proper wrapping */
+  font-size: 14px;
+  line-height: 1.4;
+  display: block;
 }
+
 .code-block > button {
   position: absolute;
   top: 10px;
   right: 10px;
-  background-color: #38364a; 
+  background-color: #38364a;
   color: white;
   border: none;
   border-radius: 5px;
@@ -99,6 +103,7 @@
   font-size: 0.8em;
   opacity: 0.8;
   transition: opacity 0.3s;
+  z-index: 20;
 }
 
 .code-block > button:hover {

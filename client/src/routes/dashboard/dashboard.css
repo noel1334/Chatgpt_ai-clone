@@ -71,13 +71,32 @@
   height: 40px;
 }
 
+/* Updated formContainer styles */
 .formContainer {
   margin-top: auto;
   width: 70%;
-  background: #2c2937;
+  background: #2c2937; /* Add background color here */
   border-radius: 20px;
   display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 10px;
+  position: relative;
+  height: 30%;
+}
+
+.message {
+  padding: 15px;
+  color: white;
+  word-break: break-word;
+}
+
+.message.user {
+  background: #2c2937;
+  border-radius: 20px;
+  max-width: 80%;
+  align-self: flex-start;
+  z-index: 99;
 }
 
 .formContainer form {
@@ -85,16 +104,47 @@
   display: flex;
   align-items: center;
   gap: 20px;
+  background-color: #2c2937;
+  border-radius: 20px;
+  padding: 0px 20px;
+  margin-top: 10px;
 }
 
-.formContainer form input {
+.formContainer form textarea {
   flex: 1;
-  padding: 15px;
-  background-color: transparent;
+  padding: 20px;
   border: none;
   outline: none;
-  color: white;
-  font-size: 16px;
+  background-color: transparent;
+  color: #ecececec;
+  border-radius: 5px;
+  resize: none;
+  overflow-y: auto;
+  min-height: 16px;
+  max-height: 150px;
+}
+.send-clear-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+/* WebKit (Chrome, Safari) scrollbar styles for textarea */
+.formContainer form textarea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.formContainer form textarea::-webkit-scrollbar-track {
+  background: #444;
+  border-radius: 5px;
+}
+
+.formContainer form textarea::-webkit-scrollbar-thumb {
+  background: #666;
+  border-radius: 5px;
+}
+
+.formContainer form textarea::-webkit-scrollbar-thumb:hover {
+  background: #888;
 }
 
 .formContainer form button {
@@ -116,6 +166,18 @@
 .formContainer form button img {
   width: 16px;
   height: 16px;
+}
+
+/* End Chat style (hidden for scrolling) */
+.endChat {
+  padding-bottom: 100px; /* Ensure there's space for scrolling */
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
 }
 
 /* Mobile Responsive */
@@ -162,7 +224,7 @@
     gap: 10px;
   }
 
-  .formContainer form input {
+  .formContainer form textarea {
     padding: 10px;
     font-size: 14px;
   }

@@ -2,27 +2,28 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch; /* Ensures content is properly stretched */
   position: relative;
 }
 
 .wrapper {
   flex: 1;
   overflow-y: auto; 
-  overflow-x: hidden; 
-  width: 100%;
+  overflow-x: hidden;
+  height: 100vh;
   display: flex;
   justify-content: center;
   scrollbar-width: thin; 
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent; 
 }
 
+/* WebKit Scrollbar Styling for .wrapper */
 .wrapper::-webkit-scrollbar {
   width: 5px; 
 }
 
 .wrapper::-webkit-scrollbar-track {
-  background: transparent; 
+  background: transparent;
 }
 
 .wrapper::-webkit-scrollbar-thumb {
@@ -31,14 +32,26 @@
 }
 
 .wrapper::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.4); 
+  background-color: rgba(255, 255, 255, 0.4);
 }
 
 .chat {
-  width: 80%;
+  width: 81%;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  height: calc(100% - 150px);
+  overflow-y: auto; 
+  min-height: 100px; 
+}
+
+/* Placeholder when chat is empty */
+.chat:empty::before {
+  content: "Start a conversation...";
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  display: block;
+  margin-top: 20px;
 }
 
 p,
@@ -47,7 +60,8 @@ li {
 }
 
 .message {
-  padding: 15px; 
+  padding: 20px;
+  margin-bottom: 10px;
 }
 
 .message.user {
@@ -60,12 +74,12 @@ li {
 /* Media query for medium screens */
 @media (min-width: 769px) and (max-width: 1024px) {
   .chat {
-    width: 70%; 
-    gap: 15px; 
+    width: 70%;
+    gap: 15px;
   }
 
   .message {
-    padding: 15px; 
+    padding: 15px;
   }
 }
 
@@ -73,7 +87,7 @@ li {
 @media (max-width: 768px) {
   .chat {
     width: 90%;
-    gap: 10px; 
+    gap: 10px;
   }
 
   .message {

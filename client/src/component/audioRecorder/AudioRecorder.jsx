@@ -5,6 +5,7 @@ const AudioRecorder = ({
   add,
   transcription,
   setTranscription,
+  setShowSendClear,
 }) => {
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [audioChunks, setAudioChunks] = useState([]);
@@ -18,22 +19,32 @@ const AudioRecorder = ({
   useEffect(() => {
     const getMicrophone = async () => {
       try {
+        // **Request Microphone Permission**
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
         const recorder = new MediaRecorder(stream);
-
         recorder.ondataavailable = (event) => {
           setAudioChunks((prev) => [...prev, event.data]);
         };
 
-        recorder.onstop = () => {
-          console.log("Recording stopped");
-        };
+        recorder.onstop = () => {};
 
         setMediaRecorder(recorder);
       } catch (error) {
+        console.log("getUserMedia error handler executed"); // Log inside error handler
         console.error("Error accessing microphone:", error);
+        // **Handle Permission Denied Error**
+        if (
+          error.name === "NotAllowedError" ||
+          error.name === "PermissionDeniedError"
+        ) {
+          alert(
+            "Microphone access denied. Please check your browser settings."
+          );
+        }
+      } finally {
+        // console.log("getUserMedia finished (try/catch/finally)");
       }
     };
 
@@ -51,37 +62,9 @@ const AudioRecorder = ({
 
   useEffect(() => {
     if (socket) {
-      socket.binaryType = "arraybuffer"; // Very important for audio data!
+      socket.binaryType = "arraybuffer";
     }
   }, [socket]);
-
-  useEffect(() => {
-    // Connect to the WebSocket server
-    const newSocket = new WebSocket("ws://localhost:3000");
-
-    newSocket.onopen = () => {
-      console.log("WebSocket connected");
-      setSocket(newSocket); // Store the socket in state when connected
-    };
-
-    newSocket.onclose = () => {
-      console.log("WebSocket disconnected");
-      setSocket(null); // Clear the socket state
-    };
-
-    newSocket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    setSocket(newSocket); // Initial socket setup
-
-    return () => {
-      if (newSocket) {
-        // Check if socket exists before closing
-        newSocket.close();
-      }
-    };
-  }, []);
 
   useEffect(() => {
     // Send audio data to WebSocket when available
@@ -91,7 +74,6 @@ const AudioRecorder = ({
         if (socket.readyState === WebSocket.OPEN) {
           // Check if the socket is open
           socket.send(buffer);
-          console.log("Audio data sent to WebSocket");
         } else {
           console.warn("WebSocket is not open. Audio data not sent.");
         }
@@ -113,7 +95,6 @@ const AudioRecorder = ({
       setAudioChunks([]);
       mediaRecorder.start();
       setIsRecording(true);
-      console.log("Recording started");
       startTranscribing();
     }
   };
@@ -122,8 +103,9 @@ const AudioRecorder = ({
     if (mediaRecorder && mediaRecorder.state === "recording") {
       mediaRecorder.stop();
       setIsRecording(false);
-      console.log("Recording stopped");
       stopTranscribing();
+      setShowSendClear(true);
+      setQuestion(transcription);
     }
   };
 
@@ -136,7 +118,6 @@ const AudioRecorder = ({
     recognition.current.lang = "en-US";
 
     recognition.current.onstart = () => {
-      console.log("Speech recognition started");
       setListening(true);
     };
 
@@ -154,7 +135,6 @@ const AudioRecorder = ({
     };
 
     recognition.current.onend = () => {
-      console.log("Speech recognition ended");
       setListening(false);
     };
 
@@ -162,23 +142,22 @@ const AudioRecorder = ({
     setListening(true);
   };
 
-  useEffect(() => {
-    if (!isRecording && listening) {
-      stopTranscribing();
-      recognition.current =
-        new webkitSpeechRecognition() || new SpeechRecognition();
-    }
-  }, [isRecording, listening]);
-
   const stopTranscribing = useCallback(() => {
     if (recognition.current) {
       setListening(false);
       recognition.current.stop();
     }
-    setQuestion(transcription);
-    add(transcription);
+    //stop audio from playing again
     recognition.current = null;
   }, [setQuestion, transcription, add]);
+
+  // useEffect(() => { // REMOVE THIS ENTIRE EFFECT
+  //   if (!isRecording && listening) {
+  //     stopTranscribing();
+  //     recognition.current =
+  //       new webkitSpeechRecognition() || new SpeechRecognition();
+  //   }
+  // }, [isRecording, listening]);
 
   return (
     <div>

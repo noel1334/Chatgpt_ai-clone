@@ -23,7 +23,7 @@ const authenticator = async () => {
   }
 };
 
-const Upload = ({ setImg }) => {
+const Upload = ({ setImg, scrollChatToBottom }) => {
   const ikUploadRef = useRef(null);
 
   const onError = (err) => {
@@ -33,6 +33,9 @@ const Upload = ({ setImg }) => {
   const onSuccess = (res) => {
     console.log("Success", res);
     setImg((prev) => ({ ...prev, isLoading: false, dbData: res }));
+    if (scrollChatToBottom) {
+      scrollChatToBottom();
+    }
   };
 
   const onUploadProgress = (progress) => {

@@ -1,10 +1,9 @@
-// CodeBlock.jsx
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, forwardRef } from "react";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import copy from "copy-to-clipboard";
 
-const CodeBlock = ({ code, language }) => {
+const CodeBlock = forwardRef(({ code, language }, ref) => {
   const [buttonText, setButtonText] = useState("Copy code");
   const preRef = useRef(null);
   const codeBlockId = useRef(
@@ -35,7 +34,7 @@ const CodeBlock = ({ code, language }) => {
       <SyntaxHighlighter
         language={language}
         style={dracula}
-        ref={preRef}
+        ref={ref} // Forward the ref to SyntaxHighlighter
         id={codeBlockId}
       >
         {code}
@@ -43,6 +42,8 @@ const CodeBlock = ({ code, language }) => {
       <button onClick={copyToClipboard}>{buttonText}</button>
     </div>
   );
-};
+});
+
+CodeBlock.displayName = "CodeBlock"; // Helpful for debugging
 
 export default CodeBlock;

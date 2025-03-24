@@ -1,0 +1,4 @@
+html, body {
+    height: 100vh; /* Or a fixed height like 600px if you prefer */
+    margin: 0; /* Reset default browser margins to avoid scrollbar issues */
+}

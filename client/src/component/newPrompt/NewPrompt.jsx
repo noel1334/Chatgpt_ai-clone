@@ -1,4 +1,3 @@
-// NewPrompt.jsx
 import React, { useEffect, useRef, useState } from "react";
 import "./newPrompt.css";
 import Upload from "../upload/Upload";
@@ -6,12 +5,14 @@ import { IKImage } from "imagekitio-react";
 import model from "../../lib/gemini";
 import Markdown from "react-markdown";
 import AudioRecorder from "../audioRecorder/AudioRecorder";
-import CodeBlock from "../../component/CodeBlock/CodeBlock";
+import CodeBlock from "../CodeBlock/CodeBlock";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/clerk-react";
 
-const NewPrompt = () => {
+const NewPrompt = ({ data, scrollChatToBottom }) => {
+  // Receive data and scrollChatToBottom callback
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
-  const endRef = useRef(null);
   const [img, setImg] = useState({
     isLoading: false,
     error: "",
@@ -22,10 +23,102 @@ const NewPrompt = () => {
   const [showTranscription, setShowTranscription] = useState(true);
   const [generating, setGenerating] = useState(false);
   const chat = useRef(null);
+  const formRef = useRef(null);
+  const [textareaHasText, setTextareaHasText] = useState(false);
+  const [showSendClear, setShowSendClear] = useState(false);
+  const baseUrl = import.meta.env.VITE_REACT_APP_BASE_URL;
+  const [errorMessage, setErrorMessage] = useState(null);
+  const { getToken, userId } = useAuth();
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [question, answer, img.dbData]);
+  const queryClient = useQueryClient();
+
+  const postChatMessage = async ({ chatId, question, answer, img }) => {
+    // Accept 'data' argument
+    const token = await getToken();
+    const url = `${baseUrl}/api/chats/${chatId}`;
+
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        question: question.length ? question : undefined,
+        answer,
+        img: img?.filePath || undefined,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to post chat message: ${response.status} - ${errorText}`
+      );
+    }
+
+    return response.json();
+  };
+
+  const createChatMutation = useMutation({
+    mutationFn: postChatMessage,
+    onMutate: async (newData) => {
+      await queryClient.cancelQueries({ queryKey: ["chat", data._id] });
+      // Snapshot the previous value
+      const previousChat = queryClient.getQueryData(["chat", data._id]);
+      // Optimistically update to the new value
+      queryClient.setQueryData(["chat", data._id], (old) => {
+        const newHistoryEntry = {
+          role: "user",
+          parts: [{ text: question }],
+          img: img.dbData?.filePath || undefined,
+        };
+
+        const newAnswerEntry = {
+          role: "model",
+          parts: [{ text: newData.answer }],
+        };
+
+        // If 'old' is undefined (first time), create a default object with an empty history array.
+        const updatedChatData = {
+          ...old, // Spread the existing properties if 'old' is defined
+          history: old
+            ? [...old.history, newHistoryEntry, newAnswerEntry]
+            : [newHistoryEntry, newAnswerEntry],
+        };
+
+        return updatedChatData;
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousChat };
+    },
+    onError: (err, newData, context) => {
+      console.error("Mutation error:", err);
+      // If the mutation fails, use the context-value to roll back
+      queryClient.setQueryData(["chat", data._id], context.previousChat);
+      setErrorMessage(error.message);
+    },
+    onSettled: () => {
+      // Always refetch after error or success:
+      queryClient.invalidateQueries({ queryKey: ["chat", data._id] });
+      setGenerating(false);
+
+      setQuestion("");
+      setTextareaHasText(false);
+      setTranscription("");
+      setShowTranscription(false);
+      setShowSendClear(false); // hide the icons
+      setAnswer(""); //Reset the answer state.
+      formRef.current.reset();
+      setImg({
+        isLoading: false,
+        error: "",
+        dbData: {},
+        aiData: {},
+      });
+    },
+  });
 
   useEffect(() => {
     chat.current = model.startChat({
@@ -48,48 +141,69 @@ const NewPrompt = () => {
         temperature: 0.7,
       },
     });
-  }, []);
+  }, [data]);
 
   const accumulatedTextRef = useRef("");
 
-  const add = async (text) => {
-    setQuestion(text);
+  const add = async (text, imageData = null) => {
     accumulatedTextRef.current = "";
     setShowTranscription(false);
-    setGenerating(true); // Start loading
+    setGenerating(true);
+
+    let messageContent = `Provide a complete answer including all relevant information: ${text}`;
+    let parts = [{ text: messageContent }];
+
+    if (imageData && imageData.mimeType && imageData.data) {
+      parts = [
+        { text: messageContent },
+        {
+          inlineData: {
+            data: imageData.data,
+            mimeType: imageData.mimeType,
+          },
+        },
+      ];
+    }
 
     try {
-      const result = await chat.current.sendMessageStream([
-        `Provide a complete answer including all relevant information: ${text}`,
-      ]);
+      const result = await chat.current.sendMessageStream(parts);
 
-      let fullAnswer = ""; // Accumulate complete answer
+      let fullAnswer = "";
       for await (const chunk of result.stream) {
         const chunkText = chunk.text();
         fullAnswer += chunkText;
         setAnswer(fullAnswer);
       }
+      //createChatMutation.mutate(data);
+      createChatMutation.mutate({
+        chatId: data._id,
+        question: text,
+        answer: fullAnswer,
+        img: img.dbData,
+      });
     } catch (error) {
       console.error("Gemini API error:", error);
     } finally {
       setGenerating(false);
     }
-    setImg({ isLoading: false, error: "", dbData: {}, aiData: {} });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    const form = e.target;
-    const text = form.elements.text.value;
 
-    if (!text) return;
-    add(text);
+    const text = question;
+
+    if (!text && !img.aiData.inlineData) return;
+
+    add(text, img.aiData.inlineData);
   };
 
   const handleChange = (e) => {
     const textarea = e.target;
     textarea.style.height = "auto";
-    textarea.style.height = Math.min(textarea.scrollHeight, 150) + "px";
+    textarea.style.height = Math.min(textarea.scrollHeight, 200) + "px";
+    setQuestion(e.target.value);
+    setTextareaHasText(e.target.value.length > 0);
   };
 
   const detectCode = (text) => {
@@ -143,6 +257,27 @@ const NewPrompt = () => {
     return segments;
   };
 
+  const handleClear = () => {
+    setQuestion(""); // reset question
+    setTextareaHasText(false); //reset boolean
+    setTranscription(""); //clear transcription
+    setShowTranscription(false); //hide transcription
+    setShowSendClear(false); // hide the icons
+  };
+
+  useEffect(() => {
+    scrollChatToBottom();
+  }, [answer, scrollChatToBottom]);
+
+  useEffect(() => {
+    if (data?.history && Array.isArray(data.history)) {
+    } else {
+    }
+    if (data?.history?.length === 1) {
+      add(data.history[0].parts[0].text, true);
+    }
+  }, [data]);
+
   return (
     <>
       {/* add new chat */}
@@ -152,51 +287,70 @@ const NewPrompt = () => {
           urlEndpoint={import.meta.env.VITE_IMAGE_KIt_ENDPOINT}
           path={img.dbData?.filePath}
           width={300}
+          height={300}
           transformation={[{ width: 300 }]}
+          loading="lazy"
         />
       )}
-      {question && <div className="message user"> {question}</div>}
       {answer &&
         splitTextAndCode(answer).map((segment, index) => {
           if (segment.type === "text") {
             return (
-              <div key={index} className="message">
+              <div key={`text-${index}`} className="message">
+                {" "}
+                {/* Use a more descriptive key */}
                 <Markdown>{segment.content}</Markdown>
               </div>
             );
           } else if (segment.type === "code") {
             return (
-              <>
-                <div key={index} className="message code-block">
+              <React.Fragment key={`code-${index}`}>
+                {/* Use React.Fragment for the pair */}
+                <div className="message code-block">
                   <CodeBlock code={segment.content} language={segment.lang} />
                 </div>
-              </>
+              </React.Fragment>
             );
           }
           return null;
         })}
-
       {showTranscription && <div className="message ">{transcription}</div>}
-      {/* Conditionally render based on showTranscription */}
-      <div className="endChat" ref={endRef}></div>
-      <form className="newForm" onSubmit={handleSubmit}>
-        <Upload setImg={setImg} />
-        <AudioRecorder
-          setQuestion={setQuestion}
-          add={add}
-          transcription={transcription}
-          setTranscription={setTranscription}
-        />
+      <form className="newForm" onSubmit={handleSubmit} ref={formRef}>
+        {/* Pass scrollChatToBottom HERE */}
+        <Upload setImg={setImg} scrollChatToBottom={scrollChatToBottom} />
         <input type="file" name="file" multiple={false} hidden />
         <textarea
           type="text"
           name="text"
           placeholder="Ask me anything...."
+          value={question}
           onChange={handleChange}
         />
-        <button>
-          <img src="/arrow.png" alt="" />
-        </button>
+        {!textareaHasText && !showSendClear && (
+          <AudioRecorder
+            setQuestion={setQuestion}
+            add={add}
+            transcription={transcription}
+            setTranscription={setTranscription}
+            setShowSendClear={setShowSendClear}
+          />
+        )}
+        {(textareaHasText || showSendClear) && (
+          <div className="send-clear-buttons">
+            <button
+              type="submit"
+              disabled={img.isLoading || generating}
+              className={img.isLoading || generating ? "disabled-button" : ""}
+            >
+              <img src="/arrow.png" alt="Send" />
+            </button>
+            {showTranscription && (
+              <button type="button" onClick={handleClear}>
+                Clear
+              </button>
+            )}
+          </div>
+        )}
       </form>
     </>
   );
