@@ -21,18 +21,38 @@ app.use(cors({
 
 app.use(express.json());
 
+// Validate ImageKit environment variables and initialize conditionally
+const requiredImageKitKeys = [
+  "IMAGE_KIT_ENDPOINT",
+  "IMAGE_KIT_PUBLIC_KEY",
+  "IMAGE_KIT_PRIVATE_KEY",
+];
 
-const imagekit = new ImageKit({
+const missingImageKitKeys = requiredImageKitKeys.filter(k => !process.env[k]);
+
+let imagekit = null;
+
+if (missingImageKitKeys.length > 0) {
+  console.warn(
+    `ImageKit is not configured. Missing environment variables: ${missingImageKitKeys.join(", ")}`
+  );
+} else {
+  imagekit = new ImageKit({
     urlEndpoint: process.env.IMAGE_KIT_ENDPOINT,
     publicKey: process.env.IMAGE_KIT_PUBLIC_KEY,
     privateKey: process.env.IMAGE_KIT_PRIVATE_KEY
-});
+  });
+}
 
 app.get("/api/upload", (req, res) => {
+    if (!imagekit) {
+      return res.status(503).json({
+        message: "ImageKit not configured on server. Set IMAGE_KIT_ENDPOINT, IMAGE_KIT_PUBLIC_KEY and IMAGE_KIT_PRIVATE_KEY."
+      });
+    }
     const result = imagekit.getAuthenticationParameters();
     res.send(result);
 });
-
 
 app.use("/api", requireAuth(), chatRoutes);
 
